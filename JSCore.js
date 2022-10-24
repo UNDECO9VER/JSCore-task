@@ -6,25 +6,34 @@ let deleteButton = [];
 let savedArrayID = [];
 const URL = "https://api.github.com/";
 
-function debounce(fn, t) {
+const debounce = (fn, t) => {
   let timeout;
   return function (...args) {
     clearTimeout(timeout);
     timeout = setTimeout(fn.bind(this, ...args), t);
   };
-}
+};
+
+const getRepo = async (value) => {
+  const response = await fetch(
+    `${URL}search/repositories?q=${value.trim()}&per_page=5&page=1`
+  );
+  return await response.json();
+};
+
+const createList = (res) => {
+  searchList.innerHTML = res.items.reduce((acc, element) => {
+    return `${acc}<li class="search__list-item">${element.name}</li>`;
+  }, ``);
+  searchListItem = document.querySelectorAll(".search__list-item");
+};
+
 const handleResponse = async (e) => {
   const { value } = e.target;
   if (value.trim() !== "") {
     try {
-      const response = await fetch(
-        `${URL}search/repositories?q=${value.trim()}&per_page=5&page=1`
-      );
-      const result = await response.json();
-      searchList.innerHTML = result.items.reduce((acc, element) => {
-        return `${acc}<li class="search__list-item">${element.name}</li>`;
-      }, ``);
-      searchListItem = document.querySelectorAll(".search__list-item");
+      const result = await getRepo(value);
+      createList(result);
       itemData(searchListItem, result);
     } catch (err) {
       alert("Превышен лимит запросов");
@@ -41,21 +50,7 @@ const itemData = (listItems, data) => {
   listItems.forEach((element, index) => {
     element.addEventListener("click", (e) => {
       if (!savedArrayID.includes(data.items[index].id)) {
-        savedArrayID.push(data.items[index].id);
-        const savedElement = document.createElement("li");
-        savedElement.classList.add("saved-list__item");
-        savedElement.setAttribute(`id`, data.items[index].id);
-        savedElement.innerHTML = `
-        <div class="saved-list__item-content">
-          <span class="saved-list__content-span">Name: ${data.items[index].name}</span>
-          <span class="saved-list__content-span">Owner: ${data.items[index].owner.login}</span>
-          <span class="saved-list__content-span">Stars: ${data.items[index].stargazers_count}</span>
-        </div>
-        <button class="saved-list__item-button">
-          <img src="assets/img/cross_icon-icons.com_72347.svg" alt="delete" />
-        </button>
-        `;
-        savedList.appendChild(savedElement);
+        createElement(data.items[index]);
         inputSearch.value = "";
         searchList.innerHTML = "";
         deleteButton = document.querySelectorAll(".saved-list__item-button");
@@ -64,6 +59,25 @@ const itemData = (listItems, data) => {
     });
   });
 };
+
+const createElement = (item) => {
+  savedArrayID.push(item.id);
+  const savedElement = document.createElement("li");
+  savedElement.classList.add("saved-list__item");
+  savedElement.setAttribute(`id`, item.id);
+  savedElement.innerHTML = `
+  <div class="saved-list__item-content">
+    <span class="saved-list__content-span">Name: ${item.name}</span>
+    <span class="saved-list__content-span">Owner: ${item.owner.login}</span>
+    <span class="saved-list__content-span">Stars: ${item.stargazers_count}</span>
+  </div>
+  <button class="saved-list__item-button">
+    <img src="assets/img/cross_icon-icons.com_72347.svg" alt="delete" />
+  </button>
+  `;
+  savedList.appendChild(savedElement);
+};
+
 const deleteItem = (btns) => {
   btns.forEach((element) => {
     element.addEventListener("click", () => {
